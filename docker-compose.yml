@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - nursetime-data:/data
+    environment:
+      PORT: "3000"
+      DB_PATH: /data/nursetime.db
+    restart: unless-stopped
+
+volumes:
+  nursetime-data:
