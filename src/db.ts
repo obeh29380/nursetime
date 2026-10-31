@@ -48,3 +48,41 @@ export const feedings = {
       "UPDATE feedings SET completed = 1 - completed WHERE id = ? RETURNING *"
     ).get(id) as Feeding | null,
 };
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS diapers (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    changed_at TEXT NOT NULL,
+    type       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  )
+`);
+
+export type Diaper = {
+  id: number;
+  changed_at: string;
+  type: string;
+  created_at: string;
+};
+
+export const diapers = {
+  list: (): Diaper[] =>
+    db.prepare("SELECT * FROM diapers ORDER BY changed_at DESC").all() as Diaper[],
+
+  get: (id: number): Diaper | null =>
+    db.prepare("SELECT * FROM diapers WHERE id = ?").get(id) as Diaper | null,
+
+  create: (changed_at: string, type: string): Diaper =>
+    db.prepare(
+      "INSERT INTO diapers (changed_at, type) VALUES (?, ?) RETURNING *"
+    ).get(changed_at, type) as Diaper,
+
+  update: (id: number, changed_at: string, type: string): Diaper | null =>
+    db.prepare(
+      "UPDATE diapers SET changed_at=?, type=? WHERE id=? RETURNING *"
+    ).get(changed_at, type, id) as Diaper | null,
+
+  delete: (id: number): void => {
+    db.run("DELETE FROM diapers WHERE id = ?", [id]);
+  },
+};

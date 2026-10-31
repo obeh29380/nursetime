@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { feedings } from "./db";
-import { layout, breastButtons, feedingItem, feedingEditForm, feedingsList } from "./views";
+import { feedings, diapers } from "./db";
+import { layout, breastButtons, feedingItem, feedingEditForm, diaperItem, diaperEditForm, allRecords } from "./views";
 
 const app = new Hono();
 
@@ -14,7 +14,8 @@ app.get("/htmx.min.js", (c) => {
 // メインページ
 app.get("/", (c) => {
   const items = feedings.list();
-  const body = breastButtons() + `<div id="feedings-list">${feedingsList(items)}</div>`;
+  const diaperItems = diapers.list();
+  const body = breastButtons() + `<div id="feedings-list">${allRecords(items, diaperItems)}</div>`;
   return c.html(layout(body));
 });
 
@@ -87,7 +88,58 @@ app.post("/feedings/:id/complete", (c) => {
   if (!f) return c.text("Not found", 404);
   return c.html(feedingItem(f));
 });
+// おむつ替え記録作成
+app.post("/diapers", async (c) => {
+  const form = await c.req.formData();
+  const changed_at = form.get("changed_at") as string | null;
+  const type = form.get("type") as string | null;
+  if (!changed_at || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(changed_at)) {
+    return c.text("\u6642\u523b\u304c\u4e0d\u6b63\u3067\u3059", 400);
+  }
+  const allowed = ["\u3046\u3093\u3061", "\u304a\u3057\u3063\u3053", "\u4e21\u65b9"];
+  if (!type || !allowed.includes(type)) return c.text("\u7a2e\u985e\u304c\u4e0d\u6b63\u3067\u3059", 400);
+  const d = diapers.create(changed_at, type);
+  return c.html(diaperItem(d));
+});
 
+// おむつ替え記録取得（編集キャンセル用）
+app.get("/diapers/:id", (c) => {
+  const id = Number(c.req.param("id"));
+  const d = diapers.get(id);
+  if (!d) return c.text("Not found", 404);
+  return c.html(diaperItem(d));
+});
+
+// おむつ替え編集フォーム
+app.get("/diapers/:id/edit", (c) => {
+  const id = Number(c.req.param("id"));
+  const d = diapers.get(id);
+  if (!d) return c.text("Not found", 404);
+  return c.html(diaperEditForm(d));
+});
+
+// おむつ替え記録更新
+app.put("/diapers/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const form = await c.req.formData();
+  const changed_at = form.get("changed_at") as string | null;
+  const type = form.get("type") as string | null;
+  if (!changed_at || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(changed_at)) {
+    return c.text("\u6642\u523b\u304c\u4e0d\u6b63\u3067\u3059", 400);
+  }
+  const allowed = ["\u3046\u3093\u3061", "\u304a\u3057\u3063\u3053", "\u4e21\u65b9"];
+  if (!type || !allowed.includes(type)) return c.text("\u7a2e\u985e\u304c\u4e0d\u6b63\u3067\u3059", 400);
+  const d = diapers.update(id, changed_at, type);
+  if (!d) return c.text("Not found", 404);
+  return c.html(diaperItem(d));
+});
+
+// おむつ替え記録削除
+app.delete("/diapers/:id", (c) => {
+  const id = Number(c.req.param("id"));
+  diapers.delete(id);
+  return c.body(null, 200);
+});
 const port = Number(process.env.PORT ?? 3000);
 console.log(`Nursetime running on http://localhost:${port}`);
 
