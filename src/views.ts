@@ -92,6 +92,21 @@ header h1 { font-size: 1.2rem; margin: 0; }
 }
 .breast-status { font-size: .8rem; color: #6b7280; }
 .breast-btn.active .breast-status { color: #065f46; font-weight: 500; }
+.breast-col { display: flex; flex-direction: column; gap: .4rem; }
+.cancel-btn {
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #fff5f5;
+  color: #dc2626;
+  font-size: .75rem;
+  font-weight: 500;
+  padding: .3rem .5rem;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 30px;
+  transition: background .1s;
+}
+.cancel-btn:hover { background: #fee2e2; }
 .diaper-col { display: flex; flex-direction: column; gap: .4rem; }
 .diaper-btn {
   flex: 1;
@@ -245,6 +260,7 @@ function _startBreast(side) {
   _state[side] = { startTime, ivId };
   document.getElementById('btn-' + side).classList.add('active');
   document.getElementById('status-' + side).textContent = '授乳終了';
+  document.getElementById('cancel-' + side).style.display = '';
   _tick(side);
 }
 
@@ -255,6 +271,7 @@ function _stopBreast(side) {
   document.getElementById('btn-' + side).classList.remove('active');
   document.getElementById('timer-' + side).textContent = '';
   document.getElementById('status-' + side).textContent = '授乳開始';
+  document.getElementById('cancel-' + side).style.display = 'none';
   htmx.ajax('POST', '/feedings', {
     target: '#feedings-list',
     swap: 'afterbegin',
@@ -287,6 +304,15 @@ function recordDiaper(type) {
     values: { changed_at: _dtStr(new Date()), type }
   });
 }
+
+function cancelBreast(side) {
+  clearInterval(_state[side].ivId);
+  _state[side] = null;
+  document.getElementById('btn-' + side).classList.remove('active');
+  document.getElementById('timer-' + side).textContent = '';
+  document.getElementById('status-' + side).textContent = '授乳開始';
+  document.getElementById('cancel-' + side).style.display = 'none';
+}
 `;
 
 export function layout(body: string): string {
@@ -313,18 +339,24 @@ export function breastButtons(): string {
   return `
 <div class="breast-section">
   <div></div>
-  <button class="breast-btn" id="btn-left" onclick="toggleBreast('left')" type="button">
-    <span class="breast-icon">🤱</span>
-    <span class="breast-label">左</span>
-    <span class="breast-timer" id="timer-left"></span>
-    <span class="breast-status" id="status-left">授乳開始</span>
-  </button>
-  <button class="breast-btn" id="btn-right" onclick="toggleBreast('right')" type="button">
-    <span class="breast-icon">🤱</span>
-    <span class="breast-label">右</span>
-    <span class="breast-timer" id="timer-right"></span>
-    <span class="breast-status" id="status-right">授乳開始</span>
-  </button>
+  <div class="breast-col">
+    <button class="breast-btn" id="btn-left" onclick="toggleBreast('left')" type="button">
+      <span class="breast-icon">🤱</span>
+      <span class="breast-label">左</span>
+      <span class="breast-timer" id="timer-left"></span>
+      <span class="breast-status" id="status-left">授乳開始</span>
+    </button>
+    <button class="cancel-btn" id="cancel-left" onclick="cancelBreast('left')" type="button" style="display:none">キャンセル</button>
+  </div>
+  <div class="breast-col">
+    <button class="breast-btn" id="btn-right" onclick="toggleBreast('right')" type="button">
+      <span class="breast-icon">🤱</span>
+      <span class="breast-label">右</span>
+      <span class="breast-timer" id="timer-right"></span>
+      <span class="breast-status" id="status-right">授乳開始</span>
+    </button>
+    <button class="cancel-btn" id="cancel-right" onclick="cancelBreast('right')" type="button" style="display:none">キャンセル</button>
+  </div>
   <div class="diaper-col">
     <button class="diaper-btn" onclick="recordDiaper('\u3046\u3093\u3061')" type="button">💩 \u3046\u3093\u3061</button>
     <button class="diaper-btn" onclick="recordDiaper('\u304a\u3057\u3063\u3053')" type="button">💧 \u304a\u3057\u3063\u3053</button>
