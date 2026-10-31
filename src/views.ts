@@ -135,22 +135,40 @@ button {
 .btn-sm { padding: .3rem .65rem; font-size: .8rem; min-height: 32px; }
 
 /* Feeding timeline */
-#feedings-list { display: flex; flex-direction: column; gap: .4rem; }
+#feedings-list { display: flex; flex-direction: column; gap: .5rem; }
 .tl-row {
   display: grid;
   grid-template-columns: 3rem 1fr 1fr;
-  gap: .4rem .75rem;
-  align-items: start;
+  column-gap: .75rem;
+  align-items: stretch;
 }
 .tl-time {
-  font-size: .72rem;
-  color: #999;
-  text-align: right;
-  padding-top: .3rem;
-  padding-right: .4rem;
-  border-right: 2px solid #e5e7eb;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: .2rem;
 }
+.tl-node {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #555;
+  font-size: .58rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: -.02em;
+}
+.tl-line {
+  flex: 1;
+  width: 2px;
+  background: #e5e7eb;
+  margin-top: .2rem;
+}
+.tl-row:last-child .tl-line { display: none; }
 .tl-cell { min-width: 0; }
 .tl-card {
   background: #fff;
@@ -295,7 +313,10 @@ export function feedingItem(f: Feeding): string {
     </div>`;
   return `
 <div class="tl-row" id="feeding-${f.id}">
-  <div class="tl-time">${fmtTime(f.started_at)}</div>
+  <div class="tl-time">
+    <div class="tl-node">${fmtTime(f.started_at)}</div>
+    <div class="tl-line"></div>
+  </div>
   <div class="tl-cell">${isLeft ? card : ""}</div>
   <div class="tl-cell">${isLeft ? "" : card}</div>
 </div>`;
@@ -304,7 +325,10 @@ export function feedingItem(f: Feeding): string {
 export function feedingEditForm(f: Feeding): string {
   return `
 <div class="tl-row" id="feeding-${f.id}">
-  <div class="tl-time">${fmtTime(f.started_at)}</div>
+  <div class="tl-time">
+    <div class="tl-node">${fmtTime(f.started_at)}</div>
+    <div class="tl-line"></div>
+  </div>
   <div class="tl-edit-form">
     <form hx-put="/feedings/${f.id}"
       hx-target="#feeding-${f.id}"
