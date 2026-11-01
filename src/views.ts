@@ -155,6 +155,13 @@ header h1 { font-size: 1.2rem; margin: 0; }
   width: 100%;
 }
 .diaper-btn:hover { border-color: #a78bfa; background: #f5f3ff; }
+.milk-record-form {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: .75rem;
+}
+.bottle-info { font-size: .75rem; color: #555; white-space: nowrap; flex-shrink: 0; }
 
 /* Forms */
 .form-row { display: flex; gap: .75rem; flex-wrap: wrap; }
@@ -287,6 +294,16 @@ function saveUsername(val) { localStorage.setItem('nursetime_user', val); }
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('username-input');
   if (el) el.value = getUsername();
+  const amSel = document.getElementById('milk-amount-select');
+  if (amSel) {
+    for (let ml = 10; ml <= 240; ml += 10) {
+      const opt = document.createElement('option');
+      opt.value = String(ml);
+      opt.textContent = ml + 'ml';
+      if (ml === 100) opt.selected = true;
+      amSel.appendChild(opt);
+    }
+  }
 });
 
 const _state = { left: null, right: null, milk: null };
@@ -357,38 +374,61 @@ function cancelBreast(side) {
 }
 
 function toggleMilk() {
-  _state.milk ? _stopMilk() : _startMilk();
+  _state.milk ? _showMilkForm() : _startMilk();
 }
 function _startMilk() {
   const startTime = new Date();
   const ivId = setInterval(() => _tick('milk'), 1000);
   _state.milk = { startTime, ivId };
   document.getElementById('btn-milk').classList.add('active');
-  document.getElementById('status-milk').textContent = 'ミルク終了';
+  document.getElementById('status-milk').textContent = '哺乳瓶終了';
   document.getElementById('cancel-milk').style.display = '';
   _tick('milk');
 }
-function _stopMilk() {
-  const { startTime, ivId } = _state.milk;
-  clearInterval(ivId);
-  _state.milk = null;
+function _showMilkForm() {
+  clearInterval(_state.milk.ivId);
+  _state.milk.ivId = null;
+  _state.milk.endTime = new Date();
   document.getElementById('btn-milk').classList.remove('active');
   document.getElementById('timer-milk').textContent = '';
-  document.getElementById('status-milk').textContent = 'ミルク開始';
   document.getElementById('cancel-milk').style.display = 'none';
+  document.getElementById('milk-btn-area').style.display = 'none';
+  document.getElementById('milk-form-area').style.display = '';
+}
+function _confirmMilk() {
+  const { startTime, endTime } = _state.milk;
+  const bottleType = document.getElementById('milk-type-select').value;
+  const amountMl = document.getElementById('milk-amount-select').value;
+  _state.milk = null;
+  document.getElementById('milk-btn-area').style.display = '';
+  document.getElementById('milk-form-area').style.display = 'none';
+  document.getElementById('status-milk').textContent = '哺乳瓶開始';
   htmx.ajax('POST', '/feedings', {
     target: '#feedings-list',
     swap: 'afterbegin',
-    values: { started_at: _dtStr(startTime), ended_at: _dtStr(new Date()), memo: 'ミルク', user: getUsername() }
+    values: { started_at: _dtStr(startTime), ended_at: _dtStr(endTime), memo: 'ミルク', bottle_type: bottleType, amount_ml: amountMl, user: getUsername() }
   });
 }
+function _resumeMilk() {
+  const startTime = _state.milk.startTime;
+  const ivId = setInterval(() => _tick('milk'), 1000);
+  _state.milk = { startTime, ivId };
+  document.getElementById('btn-milk').classList.add('active');
+  document.getElementById('status-milk').textContent = '哺乳瓶終了';
+  document.getElementById('cancel-milk').style.display = '';
+  document.getElementById('milk-btn-area').style.display = '';
+  document.getElementById('milk-form-area').style.display = 'none';
+  _tick('milk');
+}
 function cancelMilk() {
-  clearInterval(_state.milk.ivId);
+  if (_state.milk && _state.milk.ivId) clearInterval(_state.milk.ivId);
   _state.milk = null;
   document.getElementById('btn-milk').classList.remove('active');
   document.getElementById('timer-milk').textContent = '';
-  document.getElementById('status-milk').textContent = 'ミルク開始';
+  document.getElementById('status-milk').textContent = '哺乳瓶開始';
   document.getElementById('cancel-milk').style.display = 'none';
+  document.getElementById('milk-btn-area').style.display = '';
+  document.getElementById('milk-form-area').style.display = 'none';
 }
 `;
 
@@ -441,13 +481,34 @@ export function breastButtons(): string {
       </div>
     </div>
     <div class="milk-col">
-      <button class="breast-btn milk-btn" id="btn-milk" onclick="toggleMilk()" type="button">
-        <span class="breast-icon">🍼</span>
-        <span class="breast-label">ミルク</span>
-        <span class="breast-timer" id="timer-milk"></span>
-        <span class="breast-status" id="status-milk">ミルク開始</span>
-      </button>
-      <button class="cancel-btn" id="cancel-milk" onclick="cancelMilk()" type="button" style="display:none">キャンセル</button>
+      <div id="milk-btn-area">
+        <button class="breast-btn milk-btn" id="btn-milk" onclick="toggleMilk()" type="button">
+          <span class="breast-icon">🍼</span>
+          <span class="breast-label">哺乳瓶</span>
+          <span class="breast-timer" id="timer-milk"></span>
+          <span class="breast-status" id="status-milk">哺乳瓶開始</span>
+        </button>
+        <button class="cancel-btn" id="cancel-milk" onclick="cancelMilk()" type="button" style="display:none">キャンセル</button>
+      </div>
+      <div id="milk-form-area" class="milk-record-form" style="display:none">
+        <div class="form-row">
+          <div class="form-field">
+            <label>種類</label>
+            <select id="milk-type-select">
+              <option value="母乳">母乳</option>
+              <option value="ミルク" selected>ミルク</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>量</label>
+            <select id="milk-amount-select"></select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-primary btn-sm" onclick="_confirmMilk()">記録する</button>
+          <button type="button" class="btn-secondary btn-sm" onclick="_resumeMilk()">続ける</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="diaper-col">
@@ -472,6 +533,7 @@ export function feedingItem(f: Feeding): string {
       onkeydown="if(event.key==='Enter'||event.key===' ')this.click()">
       <div class="tl-card-row">
         ${isMilk ? '<span style="font-size:1rem;flex-shrink:0">🍼</span>' : ''}
+      ${isMilk && f.bottle_type ? `<span class="bottle-info">${esc(f.bottle_type)}${f.amount_ml ? ' ' + f.amount_ml + 'ml' : ''}</span>` : ''}
         <span class="feeding-duration">${duration || "—"}</span>
         <button class="btn-sm btn-danger"
           onclick="event.stopPropagation()"
@@ -505,7 +567,16 @@ export function feedingItem(f: Feeding): string {
 </div>`;
 }
 
+function milkAmountOptions(selected: number | null): string {
+  let html = "";
+  for (let ml = 10; ml <= 240; ml += 10) {
+    html += `<option value="${ml}"${selected === ml ? " selected" : ""}>${ml}ml</option>`;
+  }
+  return html;
+}
+
 export function feedingEditForm(f: Feeding): string {
+  const isMilk = f.memo === "ミルク";
   return `
 <div class="tl-row" id="feeding-${f.id}">
   <div class="tl-time">
@@ -526,10 +597,25 @@ export function feedingEditForm(f: Feeding): string {
           <input type="datetime-local" name="ended_at" value="${f.ended_at ? f.ended_at.slice(0, 16) : ""}">
         </div>
       </div>
+      ${isMilk ? `
+      <div class="form-row" style="margin-top:.5rem">
+        <div class="form-field">
+          <label>種類</label>
+          <select name="bottle_type">
+            <option value="\u6bcd\u4e73"${f.bottle_type === "\u6bcd\u4e73" ? " selected" : ""}>母乳</option>
+            <option value="\u30df\u30eb\u30af"${f.bottle_type !== "\u6bcd\u4e73" ? " selected" : ""}>ミルク</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>量</label>
+          <select name="amount_ml">${milkAmountOptions(f.amount_ml)}</select>
+        </div>
+      </div>
+      <input type="hidden" name="memo" value="\u30df\u30eb\u30af">` : `
       <div class="form-field" style="margin-top:.5rem">
         <label>メモ</label>
         <textarea name="memo">${f.memo ? esc(f.memo) : ""}</textarea>
-      </div>
+      </div>`}
       <div class="form-actions">
         <button type="submit" class="btn-primary btn-sm">保存</button>
         <button type="button" class="btn-secondary btn-sm"
@@ -541,6 +627,7 @@ export function feedingEditForm(f: Feeding): string {
   </div>
 </div>`;
 }
+
 
 export function diaperItem(d: Diaper): string {
   return `

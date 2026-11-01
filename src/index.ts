@@ -26,6 +26,8 @@ app.post("/feedings", async (c) => {
   const ended_at = (form.get("ended_at") as string | null) || null;
   const memo = (form.get("memo") as string | null) || null;
   const user = (form.get("user") as string | null) || null;
+  const bottle_type = (form.get("bottle_type") as string | null) || null;
+  const amount_ml = form.get("amount_ml") ? Number(form.get("amount_ml")) : null;
 
   if (!started_at || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(started_at)) {
     return c.text("開始時刻が不正です", 400);
@@ -34,7 +36,7 @@ app.post("/feedings", async (c) => {
     return c.text("終了時刻が不正です", 400);
   }
 
-  const f = feedings.create(started_at, ended_at, memo, user);
+  const f = feedings.create(started_at, ended_at, memo, user, bottle_type, amount_ml);
   return c.html(feedingItem(f));
 });
 
@@ -61,6 +63,8 @@ app.put("/feedings/:id", async (c) => {
   const started_at = form.get("started_at") as string | null;
   const ended_at = (form.get("ended_at") as string | null) || null;
   const memo = (form.get("memo") as string | null) || null;
+  const bottle_type = (form.get("bottle_type") as string | null) || null;
+  const amount_ml = form.get("amount_ml") ? Number(form.get("amount_ml")) : null;
 
   if (!started_at || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(started_at)) {
     return c.text("開始時刻が不正です", 400);
@@ -69,7 +73,7 @@ app.put("/feedings/:id", async (c) => {
     return c.text("終了時刻が不正です", 400);
   }
 
-  const f = feedings.update(id, started_at, ended_at, memo);
+  const f = feedings.update(id, started_at, ended_at, memo, bottle_type, amount_ml);
   if (!f) return c.text("Not found", 404);
   return c.html(feedingItem(f));
 });

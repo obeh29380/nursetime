@@ -4,21 +4,26 @@ const db = new Database(process.env.DB_PATH ?? "nursetime.db", { create: true })
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS feedings (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    started_at TEXT NOT NULL,
-    ended_at   TEXT,
-    memo       TEXT,
-    user       TEXT,
-    completed  INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at  TEXT NOT NULL,
+    ended_at    TEXT,
+    memo        TEXT,
+    user        TEXT,
+    bottle_type TEXT,
+    amount_ml   INTEGER,
+    completed   INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
   )
 `);
 
-// 既存 DB への user カラム追加マイグレーション
+// 既存 DB へのカラム追加マイグレーション
 const feedingCols = db.prepare("PRAGMA table_info(feedings)").all() as { name: string }[];
-if (!feedingCols.some(c => c.name === "user")) {
-  db.exec("ALTER TABLE feedings ADD COLUMN user TEXT");
-}
+const _addFeedingCol = (col: string, def: string) => {
+  if (!feedingCols.some(c => c.name === col)) db.exec(`ALTER TABLE feedings ADD COLUMN ${col} ${def}`);
+};
+_addFeedingCol("user", "TEXT");
+_addFeedingCol("bottle_type", "TEXT");
+_addFeedingCol("amount_ml", "INTEGER");
 
 export type Feeding = {
   id: number;
@@ -26,6 +31,8 @@ export type Feeding = {
   ended_at: string | null;
   memo: string | null;
   user: string | null;
+  bottle_type: string | null;
+  amount_ml: number | null;
   completed: number;
   created_at: string;
 };
@@ -37,15 +44,15 @@ export const feedings = {
   get: (id: number): Feeding | null =>
     db.prepare("SELECT * FROM feedings WHERE id = ?").get(id) as Feeding | null,
 
-  create: (started_at: string, ended_at: string | null, memo: string | null, user: string | null): Feeding =>
+  create: (started_at: string, ended_at: string | null, memo: string | null, user: string | null, bottle_type: string | null, amount_ml: number | null): Feeding =>
     db.prepare(
-      "INSERT INTO feedings (started_at, ended_at, memo, user) VALUES (?, ?, ?, ?) RETURNING *"
-    ).get(started_at, ended_at, memo, user) as Feeding,
+      "INSERT INTO feedings (started_at, ended_at, memo, user, bottle_type, amount_ml) VALUES (?, ?, ?, ?, ?, ?) RETURNING *"
+    ).get(started_at, ended_at, memo, user, bottle_type, amount_ml) as Feeding,
 
-  update: (id: number, started_at: string, ended_at: string | null, memo: string | null): Feeding | null =>
+  update: (id: number, started_at: string, ended_at: string | null, memo: string | null, bottle_type: string | null, amount_ml: number | null): Feeding | null =>
     db.prepare(
-      "UPDATE feedings SET started_at=?, ended_at=?, memo=? WHERE id=? RETURNING *"
-    ).get(started_at, ended_at, memo, id) as Feeding | null,
+      "UPDATE feedings SET started_at=?, ended_at=?, memo=?, bottle_type=?, amount_ml=? WHERE id=? RETURNING *"
+    ).get(started_at, ended_at, memo, bottle_type, amount_ml, id) as Feeding | null,
 
   delete: (id: number): void => {
     db.run("DELETE FROM feedings WHERE id = ?", [id]);
