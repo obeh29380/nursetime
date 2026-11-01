@@ -161,7 +161,9 @@ header h1 { font-size: 1.2rem; margin: 0; }
   border-radius: 8px;
   padding: .75rem;
 }
-.bottle-info { font-size: .75rem; color: #555; white-space: nowrap; flex-shrink: 0; }
+.bottle-info { font-size: .75rem; color: #555; flex-shrink: 0; }
+.bottle-amount { font-size: .7rem; color: #888; }
+.bottle-content { display: flex; flex-direction: column; justify-content: center; flex-shrink: 0; gap: .05rem; }
 
 /* Forms */
 .form-row { display: flex; gap: .75rem; flex-wrap: wrap; }
@@ -541,7 +543,7 @@ export function feedingItem(f: Feeding): string {
       onkeydown="if(event.key==='Enter'||event.key===' ')this.click()">
       <div class="tl-card-row">
         ${isMilk ? '<span style="font-size:1rem;flex-shrink:0">🍼</span>' : ''}
-      ${isMilk && f.bottle_type ? `<span class="bottle-info">${esc(f.bottle_type)}${f.amount_ml ? ' ' + f.amount_ml + 'ml' : ''}</span>` : ''}
+      ${isMilk && f.bottle_type ? `<div class="bottle-content"><div class="bottle-info">${esc(f.bottle_type)}</div>${f.amount_ml ? `<div class="bottle-amount">${f.amount_ml}ml</div>` : ''}</div>` : ''}
         <div class="tl-card-info">
           <span class="feeding-duration">${duration || "—"}</span>
           ${f.user ? `<span class="record-user">${esc(f.user)}</span>` : ""}
