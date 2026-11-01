@@ -69,7 +69,7 @@ header h1 { font-size: 1.2rem; margin: 0; }
   flex-shrink: 0;
 }
 .username-input:focus { outline: none; border-color: #3b82f6; }
-.record-user { font-size: .65rem; color: #9ca3af; margin-top: .15rem; }
+.record-user { font-size: .65rem; color: #9ca3af; }
 
 /* Actions section */
 .actions-section {
@@ -266,9 +266,17 @@ button {
 .tl-card:hover { background: #eff6ff; border-color: #93c5fd; }
 .tl-card-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: .4rem;
+}
+.tl-card-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .1rem;
+  flex: 1;
+  min-width: 0;
 }
 .feeding-duration {
   font-size: .9rem;
@@ -328,7 +336,7 @@ function _stopBreast(side) {
   _state[side] = null;
   document.getElementById('btn-' + side).classList.remove('active');
   document.getElementById('timer-' + side).textContent = '';
-  document.getElementById('status-' + side).textContent = '授乳開始';
+  document.getElementById('status-' + side).textContent = '開始';
   document.getElementById('cancel-' + side).style.display = 'none';
   htmx.ajax('POST', '/feedings', {
     target: '#feedings-list',
@@ -369,7 +377,7 @@ function cancelBreast(side) {
   _state[side] = null;
   document.getElementById('btn-' + side).classList.remove('active');
   document.getElementById('timer-' + side).textContent = '';
-  document.getElementById('status-' + side).textContent = '授乳開始';
+  document.getElementById('status-' + side).textContent = '開始';
   document.getElementById('cancel-' + side).style.display = 'none';
 }
 
@@ -381,7 +389,7 @@ function _startMilk() {
   const ivId = setInterval(() => _tick('milk'), 1000);
   _state.milk = { startTime, ivId };
   document.getElementById('btn-milk').classList.add('active');
-  document.getElementById('status-milk').textContent = '哺乳瓶終了';
+  document.getElementById('status-milk').textContent = '終了';
   document.getElementById('cancel-milk').style.display = '';
   _tick('milk');
 }
@@ -402,7 +410,7 @@ function _confirmMilk() {
   _state.milk = null;
   document.getElementById('milk-btn-area').style.display = '';
   document.getElementById('milk-form-area').style.display = 'none';
-  document.getElementById('status-milk').textContent = '哺乳瓶開始';
+  document.getElementById('status-milk').textContent = '開始';
   htmx.ajax('POST', '/feedings', {
     target: '#feedings-list',
     swap: 'afterbegin',
@@ -414,7 +422,7 @@ function _resumeMilk() {
   const ivId = setInterval(() => _tick('milk'), 1000);
   _state.milk = { startTime, ivId };
   document.getElementById('btn-milk').classList.add('active');
-  document.getElementById('status-milk').textContent = '哺乳瓶終了';
+  document.getElementById('status-milk').textContent = '終了';
   document.getElementById('cancel-milk').style.display = '';
   document.getElementById('milk-btn-area').style.display = '';
   document.getElementById('milk-form-area').style.display = 'none';
@@ -425,7 +433,7 @@ function cancelMilk() {
   _state.milk = null;
   document.getElementById('btn-milk').classList.remove('active');
   document.getElementById('timer-milk').textContent = '';
-  document.getElementById('status-milk').textContent = '哺乳瓶開始';
+  document.getElementById('status-milk').textContent = '開始';
   document.getElementById('cancel-milk').style.display = 'none';
   document.getElementById('milk-btn-area').style.display = '';
   document.getElementById('milk-form-area').style.display = 'none';
@@ -464,18 +472,18 @@ export function breastButtons(): string {
       <div class="breast-col">
         <button class="breast-btn" id="btn-left" onclick="toggleBreast('left')" type="button">
           <span class="breast-icon">🤱</span>
-          <span class="breast-label">左</span>
+          <span class="breast-label">母乳左</span>
           <span class="breast-timer" id="timer-left"></span>
-          <span class="breast-status" id="status-left">授乳開始</span>
+          <span class="breast-status" id="status-left">開始</span>
         </button>
         <button class="cancel-btn" id="cancel-left" onclick="cancelBreast('left')" type="button" style="display:none">キャンセル</button>
       </div>
       <div class="breast-col">
         <button class="breast-btn" id="btn-right" onclick="toggleBreast('right')" type="button">
           <span class="breast-icon">🤱</span>
-          <span class="breast-label">右</span>
+          <span class="breast-label">母乳右</span>
           <span class="breast-timer" id="timer-right"></span>
-          <span class="breast-status" id="status-right">授乳開始</span>
+          <span class="breast-status" id="status-right">開始</span>
         </button>
         <button class="cancel-btn" id="cancel-right" onclick="cancelBreast('right')" type="button" style="display:none">キャンセル</button>
       </div>
@@ -486,7 +494,7 @@ export function breastButtons(): string {
           <span class="breast-icon">🍼</span>
           <span class="breast-label">哺乳瓶</span>
           <span class="breast-timer" id="timer-milk"></span>
-          <span class="breast-status" id="status-milk">哺乳瓶開始</span>
+          <span class="breast-status" id="status-milk">開始</span>
         </button>
         <button class="cancel-btn" id="cancel-milk" onclick="cancelMilk()" type="button" style="display:none">キャンセル</button>
       </div>
@@ -514,7 +522,7 @@ export function breastButtons(): string {
   <div class="diaper-col">
     <button class="diaper-btn" onclick="recordDiaper('\u3046\u3093\u3061')" type="button">💩 \u3046\u3093\u3061</button>
     <button class="diaper-btn" onclick="recordDiaper('\u304a\u3057\u3063\u3053')" type="button">💧 \u304a\u3057\u3063\u3053</button>
-    <button class="diaper-btn" onclick="recordDiaper('\u4e21\u65b9')" type="button">🔄 \u4e21\u65b9</button>
+    <button class="diaper-btn" onclick="recordDiaper('\u4e21\u65b9')" type="button">💩💧 \u4e21\u65b9</button>
   </div>
 </div>`;
 }
@@ -534,7 +542,10 @@ export function feedingItem(f: Feeding): string {
       <div class="tl-card-row">
         ${isMilk ? '<span style="font-size:1rem;flex-shrink:0">🍼</span>' : ''}
       ${isMilk && f.bottle_type ? `<span class="bottle-info">${esc(f.bottle_type)}${f.amount_ml ? ' ' + f.amount_ml + 'ml' : ''}</span>` : ''}
-        <span class="feeding-duration">${duration || "—"}</span>
+        <div class="tl-card-info">
+          <span class="feeding-duration">${duration || "—"}</span>
+          ${f.user ? `<span class="record-user">${esc(f.user)}</span>` : ""}
+        </div>
         <button class="btn-sm btn-danger"
           onclick="event.stopPropagation()"
           hx-delete="/feedings/${f.id}"
@@ -542,7 +553,6 @@ export function feedingItem(f: Feeding): string {
           hx-swap="outerHTML"
           hx-confirm="この記録を削除しますか？">✕</button>
       </div>
-      ${f.user ? `<div class="record-user">👤 ${esc(f.user)}</div>` : ""}
     </div>`;
   if (isMilk) {
     return `
@@ -648,7 +658,10 @@ export function diaperItem(d: Diaper): string {
       title="クリックして編集"
       onkeydown="if(event.key==='Enter'||event.key===' ')this.click()">
       <div class="tl-card-row">
-        <span class="diaper-type">${esc(d.type)}</span>
+        <div class="tl-card-info">
+          <span class="diaper-type">${esc(d.type)}</span>
+          ${d.user ? `<span class="record-user">👤 ${esc(d.user)}</span>` : ""}
+        </div>
         <button class="btn-sm btn-danger"
           onclick="event.stopPropagation()"
           hx-delete="/diapers/${d.id}"
@@ -656,7 +669,6 @@ export function diaperItem(d: Diaper): string {
           hx-swap="outerHTML"
           hx-confirm="この記録を削除しますか？">✕</button>
       </div>
-      ${d.user ? `<div class="record-user">👤 ${esc(d.user)}</div>` : ""}
     </div>
   </div>
 </div>`;
