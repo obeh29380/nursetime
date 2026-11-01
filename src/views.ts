@@ -69,6 +69,27 @@ header h1 { font-size: 1.2rem; margin: 0; }
   flex-shrink: 0;
 }
 .username-input:focus { outline: none; border-color: #3b82f6; }
+.header-right { display: flex; align-items: center; gap: .4rem; }
+.settings-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: .25rem .3rem;
+  min-height: auto;
+  color: #6b7280;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.settings-btn:hover { color: #374151; background: #f3f4f6; }
+.settings-panel { border-top: 1px solid #e0e0e0; background: #fff; }
+.settings-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: .6rem 1rem;
+}
+.settings-label { font-size: .78rem; font-weight: 600; color: #374151; display: block; margin-bottom: .4rem; }
 .record-user { font-size: .65rem; color: #9ca3af; }
 
 /* Actions section */
@@ -301,20 +322,46 @@ button {
 const SCRIPT = `
 function getUsername() { return localStorage.getItem('nursetime_user') || ''; }
 function saveUsername(val) { localStorage.setItem('nursetime_user', val); }
+function getMilkMin() { return Number(localStorage.getItem('nursetime_milk_min') || '10'); }
+function getMilkMax() { return Number(localStorage.getItem('nursetime_milk_max') || '240'); }
+function saveMilkMin(v) { localStorage.setItem('nursetime_milk_min', v); _rebuildMilkSelects(); }
+function saveMilkMax(v) { localStorage.setItem('nursetime_milk_max', v); _rebuildMilkSelects(); }
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+function _buildMilkOpts(sel, min, max) {
+  const cur = sel.value;
+  sel.innerHTML = '';
+  for (let ml = min; ml <= max; ml += 10) {
+    const o = document.createElement('option');
+    o.value = String(ml); o.textContent = ml + 'ml';
+    if (String(ml) === cur) o.selected = true;
+    sel.appendChild(o);
+  }
+  if (!sel.value && sel.options.length) sel.options[0].selected = true;
+}
+function _rebuildMilkSelects() {
+  const min = getMilkMin(), max = getMilkMax();
+  const regSel = document.getElementById('milk-amount-select');
+  if (regSel) _buildMilkOpts(regSel, min, max);
+  document.querySelectorAll('select[name="amount_ml"]').forEach(s => _buildMilkOpts(s, min, max));
+}
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('username-input');
   if (el) el.value = getUsername();
-  const amSel = document.getElementById('milk-amount-select');
-  if (amSel) {
-    for (let ml = 10; ml <= 240; ml += 10) {
-      const opt = document.createElement('option');
-      opt.value = String(ml);
-      opt.textContent = ml + 'ml';
-      if (ml === 100) opt.selected = true;
-      amSel.appendChild(opt);
+  const curMin = getMilkMin(), curMax = getMilkMax();
+  const minSel = document.getElementById('milk-min-select');
+  const maxSel = document.getElementById('milk-max-select');
+  if (minSel && maxSel) {
+    for (let ml = 10; ml <= 500; ml += 10) {
+      minSel.add(new Option(ml + 'ml', ml, false, ml === curMin));
+      maxSel.add(new Option(ml + 'ml', ml, false, ml === curMax));
     }
   }
+  _rebuildMilkSelects();
 });
+document.addEventListener('htmx:afterSettle', _rebuildMilkSelects);
 
 const _state = { left: null, right: null, milk: null };
 
@@ -456,7 +503,25 @@ export function layout(body: string): string {
   <header>
     <div class="header-inner">
       <h1>🍼 Nursetime</h1>
-      <input type="text" id="username-input" class="username-input" placeholder="ユーザ名" oninput="saveUsername(this.value)" maxlength="20" autocomplete="off">
+      <div class="header-right">
+        <input type="text" id="username-input" class="username-input" placeholder="ユーザ名" oninput="saveUsername(this.value)" maxlength="20" autocomplete="off">
+        <button type="button" class="settings-btn" onclick="toggleSettings()" title="設定">⚙️</button>
+      </div>
+    </div>
+    <div id="settings-panel" class="settings-panel" style="display:none">
+      <div class="settings-inner">
+        <span class="settings-label">ミルク量の範囲</span>
+        <div class="form-row">
+          <div class="form-field">
+            <label>最小量</label>
+            <select id="milk-min-select" onchange="saveMilkMin(this.value)"></select>
+          </div>
+          <div class="form-field">
+            <label>最大量</label>
+            <select id="milk-max-select" onchange="saveMilkMax(this.value)"></select>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
   <div class="container">${body}</div>
@@ -581,7 +646,7 @@ export function feedingItem(f: Feeding): string {
 
 function milkAmountOptions(selected: number | null): string {
   let html = "";
-  for (let ml = 10; ml <= 240; ml += 10) {
+  for (let ml = 10; ml <= 500; ml += 10) {
     html += `<option value="${ml}"${selected === ml ? " selected" : ""}>${ml}ml</option>`;
   }
   return html;
