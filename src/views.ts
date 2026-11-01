@@ -54,12 +54,25 @@ header {
 }
 header h1 { font-size: 1.2rem; margin: 0; }
 
-/* Breast timer buttons */
-.breast-section {
+/* Actions section */
+.actions-section {
   display: grid;
   grid-template-columns: 3rem 1fr 1fr 1fr;
   gap: .75rem;
   margin-bottom: 1rem;
+  align-items: stretch;
+}
+.breast-milk-group {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  min-width: 0;
+}
+.breast-pair {
+  display: flex;
+  gap: .75rem;
+  flex: 1;
 }
 .breast-btn {
   display: flex;
@@ -92,7 +105,10 @@ header h1 { font-size: 1.2rem; margin: 0; }
 }
 .breast-status { font-size: .8rem; color: #6b7280; }
 .breast-btn.active .breast-status { color: #065f46; font-weight: 500; }
-.breast-col { display: flex; flex-direction: column; gap: .4rem; }
+.breast-col { display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
+.breast-col .breast-btn { flex: 1; }
+.milk-col { display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
+.milk-btn { flex-direction: row; gap: .6rem; min-height: 56px; padding: .75rem 1rem; }
 .cancel-btn {
   border: 1px solid #fca5a5;
   border-radius: 6px;
@@ -107,7 +123,7 @@ header h1 { font-size: 1.2rem; margin: 0; }
   transition: background .1s;
 }
 .cancel-btn:hover { background: #fee2e2; }
-.diaper-col { display: flex; flex-direction: column; gap: .4rem; }
+.diaper-col { display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
 .diaper-btn {
   flex: 1;
   border: 2px solid #e0e0e0;
@@ -213,7 +229,8 @@ button {
   margin-top: .2rem;
 }
 .tl-row:last-child .tl-line { display: none; }
-.tl-cell { min-width: 0; }
+.tl-cell { min-width: 0; overflow: hidden; }
+.tl-cell-span2 { grid-column: span 2; min-width: 0; overflow: hidden; }
 .tl-card {
   background: #fff;
   border: 1px solid #e0e0e0;
@@ -248,7 +265,7 @@ button {
 `;
 
 const SCRIPT = `
-const _state = { left: null, right: null };
+const _state = { left: null, right: null, milk: null };
 
 function toggleBreast(side) {
   _state[side] ? _stopBreast(side) : _startBreast(side);
@@ -313,6 +330,41 @@ function cancelBreast(side) {
   document.getElementById('status-' + side).textContent = '授乳開始';
   document.getElementById('cancel-' + side).style.display = 'none';
 }
+
+function toggleMilk() {
+  _state.milk ? _stopMilk() : _startMilk();
+}
+function _startMilk() {
+  const startTime = new Date();
+  const ivId = setInterval(() => _tick('milk'), 1000);
+  _state.milk = { startTime, ivId };
+  document.getElementById('btn-milk').classList.add('active');
+  document.getElementById('status-milk').textContent = 'ミルク終了';
+  document.getElementById('cancel-milk').style.display = '';
+  _tick('milk');
+}
+function _stopMilk() {
+  const { startTime, ivId } = _state.milk;
+  clearInterval(ivId);
+  _state.milk = null;
+  document.getElementById('btn-milk').classList.remove('active');
+  document.getElementById('timer-milk').textContent = '';
+  document.getElementById('status-milk').textContent = 'ミルク開始';
+  document.getElementById('cancel-milk').style.display = 'none';
+  htmx.ajax('POST', '/feedings', {
+    target: '#feedings-list',
+    swap: 'afterbegin',
+    values: { started_at: _dtStr(startTime), ended_at: _dtStr(new Date()), memo: 'ミルク' }
+  });
+}
+function cancelMilk() {
+  clearInterval(_state.milk.ivId);
+  _state.milk = null;
+  document.getElementById('btn-milk').classList.remove('active');
+  document.getElementById('timer-milk').textContent = '';
+  document.getElementById('status-milk').textContent = 'ミルク開始';
+  document.getElementById('cancel-milk').style.display = 'none';
+}
 `;
 
 export function layout(body: string): string {
@@ -337,25 +389,38 @@ export function layout(body: string): string {
 
 export function breastButtons(): string {
   return `
-<div class="breast-section">
+<div class="actions-section">
   <div></div>
-  <div class="breast-col">
-    <button class="breast-btn" id="btn-left" onclick="toggleBreast('left')" type="button">
-      <span class="breast-icon">🤱</span>
-      <span class="breast-label">左</span>
-      <span class="breast-timer" id="timer-left"></span>
-      <span class="breast-status" id="status-left">授乳開始</span>
-    </button>
-    <button class="cancel-btn" id="cancel-left" onclick="cancelBreast('left')" type="button" style="display:none">キャンセル</button>
-  </div>
-  <div class="breast-col">
-    <button class="breast-btn" id="btn-right" onclick="toggleBreast('right')" type="button">
-      <span class="breast-icon">🤱</span>
-      <span class="breast-label">右</span>
-      <span class="breast-timer" id="timer-right"></span>
-      <span class="breast-status" id="status-right">授乳開始</span>
-    </button>
-    <button class="cancel-btn" id="cancel-right" onclick="cancelBreast('right')" type="button" style="display:none">キャンセル</button>
+  <div class="breast-milk-group">
+    <div class="breast-pair">
+      <div class="breast-col">
+        <button class="breast-btn" id="btn-left" onclick="toggleBreast('left')" type="button">
+          <span class="breast-icon">🤱</span>
+          <span class="breast-label">左</span>
+          <span class="breast-timer" id="timer-left"></span>
+          <span class="breast-status" id="status-left">授乳開始</span>
+        </button>
+        <button class="cancel-btn" id="cancel-left" onclick="cancelBreast('left')" type="button" style="display:none">キャンセル</button>
+      </div>
+      <div class="breast-col">
+        <button class="breast-btn" id="btn-right" onclick="toggleBreast('right')" type="button">
+          <span class="breast-icon">🤱</span>
+          <span class="breast-label">右</span>
+          <span class="breast-timer" id="timer-right"></span>
+          <span class="breast-status" id="status-right">授乳開始</span>
+        </button>
+        <button class="cancel-btn" id="cancel-right" onclick="cancelBreast('right')" type="button" style="display:none">キャンセル</button>
+      </div>
+    </div>
+    <div class="milk-col">
+      <button class="breast-btn milk-btn" id="btn-milk" onclick="toggleMilk()" type="button">
+        <span class="breast-icon">🍼</span>
+        <span class="breast-label">ミルク</span>
+        <span class="breast-timer" id="timer-milk"></span>
+        <span class="breast-status" id="status-milk">ミルク開始</span>
+      </button>
+      <button class="cancel-btn" id="cancel-milk" onclick="cancelMilk()" type="button" style="display:none">キャンセル</button>
+    </div>
   </div>
   <div class="diaper-col">
     <button class="diaper-btn" onclick="recordDiaper('\u3046\u3093\u3061')" type="button">💩 \u3046\u3093\u3061</button>
@@ -366,6 +431,7 @@ export function breastButtons(): string {
 }
 
 export function feedingItem(f: Feeding): string {
+  const isMilk = f.memo === "ミルク";
   const isLeft = f.memo === "左";
   const duration = calcDuration(f.started_at, f.ended_at);
   const card = `<div class="tl-card"
@@ -377,15 +443,27 @@ export function feedingItem(f: Feeding): string {
       title="クリックして編集"
       onkeydown="if(event.key==='Enter'||event.key===' ')this.click()">
       <div class="tl-card-row">
+        ${isMilk ? '<span style="font-size:1rem;flex-shrink:0">🍼</span>' : ''}
         <span class="feeding-duration">${duration || "—"}</span>
         <button class="btn-sm btn-danger"
           onclick="event.stopPropagation()"
           hx-delete="/feedings/${f.id}"
           hx-target="#feeding-${f.id}"
           hx-swap="outerHTML"
-          hx-confirm="この記録を削除しますか？">削除</button>
+          hx-confirm="この記録を削除しますか？">✕</button>
       </div>
     </div>`;
+  if (isMilk) {
+    return `
+<div class="tl-row" id="feeding-${f.id}">
+  <div class="tl-time">
+    <div class="tl-node">${fmtTime(f.started_at)}</div>
+    <div class="tl-line"></div>
+  </div>
+  <div class="tl-cell-span2">${card}</div>
+  <div class="tl-cell"></div>
+</div>`;
+  }
   return `
 <div class="tl-row" id="feeding-${f.id}">
   <div class="tl-time">
@@ -460,7 +538,7 @@ export function diaperItem(d: Diaper): string {
           hx-delete="/diapers/${d.id}"
           hx-target="#diaper-${d.id}"
           hx-swap="outerHTML"
-          hx-confirm="この記録を削除しますか？">削除</button>
+          hx-confirm="この記録を削除しますか？">✕</button>
       </div>
     </div>
   </div>
