@@ -25,6 +25,7 @@ app.post("/feedings", async (c) => {
   const started_at = form.get("started_at") as string | null;
   const ended_at = (form.get("ended_at") as string | null) || null;
   const memo = (form.get("memo") as string | null) || null;
+  const user = (form.get("user") as string | null) || null;
 
   if (!started_at || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(started_at)) {
     return c.text("開始時刻が不正です", 400);
@@ -33,7 +34,7 @@ app.post("/feedings", async (c) => {
     return c.text("終了時刻が不正です", 400);
   }
 
-  const f = feedings.create(started_at, ended_at, memo);
+  const f = feedings.create(started_at, ended_at, memo, user);
   return c.html(feedingItem(f));
 });
 
@@ -98,7 +99,8 @@ app.post("/diapers", async (c) => {
   }
   const allowed = ["\u3046\u3093\u3061", "\u304a\u3057\u3063\u3053", "\u4e21\u65b9"];
   if (!type || !allowed.includes(type)) return c.text("\u7a2e\u985e\u304c\u4e0d\u6b63\u3067\u3059", 400);
-  const d = diapers.create(changed_at, type);
+  const user = (form.get("user") as string | null) || null;
+  const d = diapers.create(changed_at, type, user);
   return c.html(diaperItem(d));
 });
 

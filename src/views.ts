@@ -51,8 +51,25 @@ header {
   max-width: 640px;
   margin: 0 auto;
   padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 header h1 { font-size: 1.2rem; margin: 0; }
+.username-input {
+  width: 7rem;
+  padding: .3rem .5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  font-size: .8rem;
+  font-family: inherit;
+  background: #f8f9fa;
+  text-align: center;
+  flex-shrink: 0;
+}
+.username-input:focus { outline: none; border-color: #3b82f6; }
+.record-user { font-size: .65rem; color: #9ca3af; margin-top: .15rem; }
 
 /* Actions section */
 .actions-section {
@@ -265,6 +282,13 @@ button {
 `;
 
 const SCRIPT = `
+function getUsername() { return localStorage.getItem('nursetime_user') || ''; }
+function saveUsername(val) { localStorage.setItem('nursetime_user', val); }
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('username-input');
+  if (el) el.value = getUsername();
+});
+
 const _state = { left: null, right: null, milk: null };
 
 function toggleBreast(side) {
@@ -295,7 +319,8 @@ function _stopBreast(side) {
     values: {
       started_at: _dtStr(startTime),
       ended_at: _dtStr(new Date()),
-      memo: side === 'left' ? '左' : '右'
+      memo: side === 'left' ? '左' : '右',
+      user: getUsername()
     }
   });
 }
@@ -318,7 +343,7 @@ function recordDiaper(type) {
   htmx.ajax('POST', '/diapers', {
     target: '#feedings-list',
     swap: 'afterbegin',
-    values: { changed_at: _dtStr(new Date()), type }
+    values: { changed_at: _dtStr(new Date()), type, user: getUsername() }
   });
 }
 
@@ -354,7 +379,7 @@ function _stopMilk() {
   htmx.ajax('POST', '/feedings', {
     target: '#feedings-list',
     swap: 'afterbegin',
-    values: { started_at: _dtStr(startTime), ended_at: _dtStr(new Date()), memo: 'ミルク' }
+    values: { started_at: _dtStr(startTime), ended_at: _dtStr(new Date()), memo: 'ミルク', user: getUsername() }
   });
 }
 function cancelMilk() {
@@ -379,7 +404,10 @@ export function layout(body: string): string {
 </head>
 <body>
   <header>
-    <div class="header-inner"><h1>🍼 Nursetime</h1></div>
+    <div class="header-inner">
+      <h1>🍼 Nursetime</h1>
+      <input type="text" id="username-input" class="username-input" placeholder="ユーザ名" oninput="saveUsername(this.value)" maxlength="20" autocomplete="off">
+    </div>
   </header>
   <div class="container">${body}</div>
   <script>${SCRIPT}</script>
@@ -452,6 +480,7 @@ export function feedingItem(f: Feeding): string {
           hx-swap="outerHTML"
           hx-confirm="この記録を削除しますか？">✕</button>
       </div>
+      ${f.user ? `<div class="record-user">👤 ${esc(f.user)}</div>` : ""}
     </div>`;
   if (isMilk) {
     return `
@@ -540,6 +569,7 @@ export function diaperItem(d: Diaper): string {
           hx-swap="outerHTML"
           hx-confirm="この記録を削除しますか？">✕</button>
       </div>
+      ${d.user ? `<div class="record-user">👤 ${esc(d.user)}</div>` : ""}
     </div>
   </div>
 </div>`;
